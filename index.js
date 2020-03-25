@@ -6,6 +6,8 @@ const app = express();
 const server = http.createServer(app);
 const io = SocketIO(server);
 
+const port = process.env.PORT || 4000;
+
 let rooms = {};
 
 io.on('connection', socket => {
@@ -70,6 +72,6 @@ io.on('connection', function(socket) {
   console.log('a user connected');
 });
 
-server.listen(3000, function() {
-  console.log('listening on *:3000');
+server.listen(port, function() {
+  console.log(`listening on *:${port}`);
 });
