@@ -1,0 +1,16 @@
+{
+  "name": "banjo-server",
+  "version": "1.0.0",
+  "description": "Banjo Server, a group spotify client",
+  "main": "index.js",
+  "author": "brian.anderson@voxmedia.com",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "express": "^4.17.1",
+    "socket.io": "^2.3.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.2"
+  }
+}
