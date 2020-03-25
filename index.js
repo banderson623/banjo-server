@@ -12,7 +12,7 @@ let rooms = {};
 
 io.on('connection', socket => {
   let inRoomName = '';
-  let myName = '';
+  let clientName = '';
 
   const updateClientRoom = () => {
     console.log('sendng room event', rooms[inRoomName]);
@@ -22,8 +22,8 @@ io.on('connection', socket => {
   console.log('a user connected');
 
   socket.on('setName', name => {
-    const oldName = myName;
-    myName = name;
+    const oldName = clientName;
+    clientName = name;
     if (!rooms[inRoomName] && !!oldName) {
       rooms[inRoomName].people = rooms[inRoomName].people.filter(
         n => n !== oldName
@@ -35,17 +35,25 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     console.log('disconnect');
     if (rooms[inRoomName]) {
+      console.log('removing', clientName);
       rooms[inRoomName].people = rooms[inRoomName].people.filter(
-        n => n !== myName
+        n => n !== clientName
       );
       rooms[inRoomName].count--;
       io.to(inRoomName).emit('roomEvent', rooms[inRoomName]);
+      console.log('rooms', rooms[inRoomName]);
     }
   });
 
   socket.on('joinRoom', ({ roomName, myName }) => {
     inRoomName = roomName;
-    console.log('a client is requesting to join a room', roomName);
+    clientName = myName;
+    console.log(
+      'a client is requesting to join a room',
+      roomName,
+      'their name',
+      clientName
+    );
 
     socket.join(inRoomName);
     if (!rooms[inRoomName]) {
@@ -55,7 +63,7 @@ io.on('connection', socket => {
         people: [],
       };
     }
-    rooms[inRoomName].people.push(myName);
+    rooms[inRoomName].people.push(clientName);
     rooms[inRoomName].count++;
 
     updateClientRoom();
