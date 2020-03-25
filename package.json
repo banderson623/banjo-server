@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Banjo Server, a group spotify client",
   "main": "index.js",
-  "author": "brian.anderson@voxmedia.com",
+  "author": "banderson623@gmail.com",
   "license": "MIT",
   "private": false,
   "dependencies": {
