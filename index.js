@@ -14,21 +14,26 @@ io.on('connection', socket => {
   let inRoomName = '';
   let clientName = '';
 
+  console.log('a user connected');
+
   const updateClientRoom = () => {
     console.log('sendng room event', rooms[inRoomName]);
     io.to(inRoomName).emit('roomEvent', rooms[inRoomName]);
   };
 
-  console.log('a user connected');
-
   socket.on('setName', name => {
     const oldName = clientName;
     clientName = name;
-    if (!rooms[inRoomName] && !!oldName) {
+    if (!!rooms[inRoomName]) {
       rooms[inRoomName].people = rooms[inRoomName].people.filter(
         n => n !== oldName
       );
-      rooms[inRoomName].people.push(name);
+
+      if (rooms[inRoomName].dj == oldName) {
+        rooms[inRoomName].dj = clientName;
+      }
+      rooms[inRoomName].people.push(clientName);
+      updateClientRoom();
     }
   });
 
@@ -42,6 +47,14 @@ io.on('connection', socket => {
       rooms[inRoomName].count--;
       io.to(inRoomName).emit('roomEvent', rooms[inRoomName]);
       console.log('rooms', rooms[inRoomName]);
+    }
+  });
+
+  socket.on('becomeDJ', ({ room, name }) => {
+    console.log('Receiving DJ request from', name, 'in room', room);
+    if (rooms[room]) {
+      rooms[room]['dj'] = name;
+      updateClientRoom();
     }
   });
 
@@ -61,6 +74,7 @@ io.on('connection', socket => {
         count: 0,
         name: inRoomName,
         people: [],
+        dj: clientName,
       };
     }
     rooms[inRoomName].people.push(clientName);
@@ -70,7 +84,7 @@ io.on('connection', socket => {
   });
 
   socket.on('hostEvent', msg => {
-    console.log('got event from host', msg.position);
+    console.log('got event from host', msg.position, msg.name);
     console.log('to room', inRoomName);
     io.to(inRoomName).emit('hostEvent', msg);
   });
