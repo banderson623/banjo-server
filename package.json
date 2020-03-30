@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Banjo Server, a group spotify client",
   "main": "index.js",
+  "repository": "https://github.com/banderson623/banjo-server",
   "author": "banderson623@gmail.com",
   "license": "MIT",
   "private": false,
