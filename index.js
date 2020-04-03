@@ -21,6 +21,16 @@ io.on('connection', socket => {
     io.to(inRoomName).emit('roomEvent', rooms[inRoomName]);
   };
 
+  const leaveRoom = (roomName, name) => {
+    if (rooms[roomName]) {
+      console.log('removing', name, 'from', roomName);
+      rooms[roomName].people = rooms[roomName].people.filter(n => n !== name);
+      rooms[roomName].count--;
+      io.to(roomName).emit('roomEvent', rooms[roomName]);
+      console.log('rooms', rooms[roomName]);
+    }
+  };
+
   socket.on('setName', name => {
     const oldName = clientName;
     clientName = name;
@@ -39,15 +49,7 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     console.log('disconnect');
-    if (rooms[inRoomName]) {
-      console.log('removing', clientName);
-      rooms[inRoomName].people = rooms[inRoomName].people.filter(
-        n => n !== clientName
-      );
-      rooms[inRoomName].count--;
-      io.to(inRoomName).emit('roomEvent', rooms[inRoomName]);
-      console.log('rooms', rooms[inRoomName]);
-    }
+    leaveRoom(inRoomName, clientName);
   });
 
   socket.on('becomeDJ', ({ room, name }) => {
@@ -59,6 +61,8 @@ io.on('connection', socket => {
   });
 
   socket.on('joinRoom', ({ roomName, myName }) => {
+    leaveRoom(inRoomName, myName);
+
     inRoomName = roomName;
     clientName = myName;
     console.log(
