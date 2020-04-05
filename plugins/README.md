@@ -67,6 +67,12 @@ module.exports = class DJChange extends PluginBase {
 };
 ```
 
+## Creating your own plugin
+
+1. Create a file in this directory (`plugins/`)
+1. Create something fantastic!
+1. Add it to `plugins/index.js` to be loaded when the server starts
+
 ## Everything in Banjo Server is based on rooms
 
 Rooms are not discoverable. This is intentional, and while you can certainly create plugins to share and emit events between rooms, please becareful with this. There is something fun about private groups on the internet so be mindful of this when building plugins.
