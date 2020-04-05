@@ -5,12 +5,46 @@ const SocketIO = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 const io = SocketIO(server);
+const plugins = require('./plugins');
 
 const port = process.env.PORT || 4000;
 
 let rooms = {};
+let roomPlugins = {};
 
-io.on('connection', socket => {
+const destroyAllRoomPlugins = (roomName) => {
+  console.log(`destroying all plugins for ${roomName}`);
+  roomPlugins[roomName] = [];
+};
+
+const registerUserRoomPlugins = (roomName, clientSocket) => {
+  if (roomPlugins[roomName]) {
+    roomPlugins[roomName].forEach((plugin) => {
+      plugin.constructor.eventsToListenFor().forEach((eventName) => {
+        clientSocket.on(eventName, (data) =>
+          plugin.messageRecieved(eventName, data, clientSocket)
+        );
+      });
+    });
+  }
+};
+
+const registerRoomPluginsFor = (roomName) => {
+  console.log('rooom plugin time');
+  if (!!roomPlugins[roomName]) {
+    console.log('plugins already setup for room');
+    return;
+  }
+
+  console.log('new room, creating and registering plugins');
+  const thisRoomsPlugins = plugins.roomPlugins.map(
+    (plugin) => new plugin(roomName, rooms[roomName], io)
+  );
+
+  roomPlugins[roomName] = thisRoomsPlugins;
+};
+
+io.on('connection', (socket) => {
   let inRoomName = '';
   let clientName = '';
 
@@ -24,19 +58,29 @@ io.on('connection', socket => {
   const leaveRoom = (roomName, name) => {
     if (rooms[roomName]) {
       console.log('removing', name, 'from', roomName);
-      rooms[roomName].people = rooms[roomName].people.filter(n => n !== name);
+      rooms[roomName].people = rooms[roomName].people.filter((n) => n !== name);
       rooms[roomName].count--;
       io.to(roomName).emit('roomEvent', rooms[roomName]);
       console.log('rooms', rooms[roomName]);
+
+      if (
+        rooms[roomName].count === undefined ||
+        rooms[roomName].count === 0 ||
+        rooms[roomName].people === undefined ||
+        rooms[roomName].people.length == 0
+      ) {
+        destroyAllRoomPlugins();
+        rooms[roomName] = undefined;
+      }
     }
   };
 
-  socket.on('setName', name => {
+  socket.on('setName', (name) => {
     const oldName = clientName;
     clientName = name;
     if (!!rooms[inRoomName]) {
       rooms[inRoomName].people = rooms[inRoomName].people.filter(
-        n => n !== oldName
+        (n) => n !== oldName
       );
 
       if (rooms[inRoomName].dj == oldName) {
@@ -84,20 +128,21 @@ io.on('connection', socket => {
     rooms[inRoomName].people.push(clientName);
     rooms[inRoomName].count++;
 
+    registerRoomPluginsFor(inRoomName);
+    registerUserRoomPlugins(roomName, socket);
     updateClientRoom();
   });
 
-  socket.on('hostEvent', msg => {
+  socket.on('hostEvent', (msg) => {
     console.log('got event from host', msg.position, msg.name);
-    console.log('to room', inRoomName);
     io.to(inRoomName).emit('hostEvent', msg);
   });
 });
 
-io.on('connection', function(socket) {
+io.on('connection', function (socket) {
   console.log('a user connected');
 });
 
-server.listen(port, function() {
+server.listen(port, function () {
   console.log(`listening on *:${port}`);
 });
