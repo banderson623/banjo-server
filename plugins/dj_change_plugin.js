@@ -4,7 +4,7 @@ module.exports = class DJChange extends PluginBase {
   onConnect(socket) {
     // Reflect the message back
     socket.on('becomeDJ', () => {
-      this.sendToRoomForSocket(socket, 'reaction', 'dj-change');
+      this.broadcastToSocketsRoom(socket, 'reaction', 'dj-change');
     });
   }
 };
