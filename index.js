@@ -1,54 +1,45 @@
 const express = require('express');
 const http = require('http');
 const SocketIO = require('socket.io');
+const AllPlugins = require('./plugins');
 
 const app = express();
 const server = http.createServer(app);
 const io = SocketIO(server);
-const plugins = require('./plugins');
 
 const port = process.env.PORT || 4000;
 
 let rooms = {};
-let roomPlugins = {};
+let plugins = [];
 
-const destroyAllRoomPlugins = (roomName) => {
-  console.log(`destroying all plugins for ${roomName}`);
-  roomPlugins[roomName] = [];
+const registerPlugins = (io) => {
+  plugins = AllPlugins.map((Plugin) => new Plugin(io));
 };
 
-const registerUserRoomPlugins = (roomName, clientSocket) => {
-  if (roomPlugins[roomName]) {
-    roomPlugins[roomName].forEach((plugin) => {
-      plugin.constructor.eventsToListenFor().forEach((eventName) => {
-        clientSocket.on(eventName, (data) =>
-          plugin.messageRecieved(eventName, data, clientSocket)
-        );
-      });
-    });
-  }
+const notifyPluginsOfConnection = (socket) => {
+  console.log(`plugins being notified socket connect`);
+  plugins.forEach((plug) => plug.connected(socket));
 };
 
-const registerRoomPluginsFor = (roomName) => {
-  console.log('rooom plugin time');
-  if (!!roomPlugins[roomName]) {
-    console.log('plugins already setup for room');
-    return;
-  }
-
-  console.log('new room, creating and registering plugins');
-  const thisRoomsPlugins = plugins.roomPlugins.map(
-    (plugin) => new plugin(roomName, rooms[roomName], io)
-  );
-
-  roomPlugins[roomName] = thisRoomsPlugins;
+const notifyPluginsOfDisonnection = (socket) => {
+  console.log(`plugins being notified socket disconnect`);
+  plugins.forEach((plug) => plug.disconnected(socket));
 };
+
+const notifyPluginsOfJoinedRoom = (socket, roomName) => {
+  console.log(`plugins being notified of room join`);
+  plugins.forEach((plug) => plug.markSocketInRoom(socket, roomName));
+};
+
+registerPlugins(io);
 
 io.on('connection', (socket) => {
   let inRoomName = '';
   let clientName = '';
 
   console.log('a user connected');
+
+  notifyPluginsOfConnection(socket);
 
   const updateClientRoom = () => {
     console.log('sendng room event', rooms[inRoomName]);
@@ -69,7 +60,6 @@ io.on('connection', (socket) => {
         rooms[roomName].people === undefined ||
         rooms[roomName].people.length == 0
       ) {
-        destroyAllRoomPlugins();
         rooms[roomName] = undefined;
       }
     }
@@ -93,6 +83,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('disconnect');
+    notifyPluginsOfDisonnection(socket);
     leaveRoom(inRoomName, clientName);
   });
 
@@ -127,9 +118,7 @@ io.on('connection', (socket) => {
     }
     rooms[inRoomName].people.push(clientName);
     rooms[inRoomName].count++;
-
-    registerRoomPluginsFor(inRoomName);
-    registerUserRoomPlugins(roomName, socket);
+    notifyPluginsOfJoinedRoom(socket, inRoomName);
     updateClientRoom();
   });
 

@@ -1,5 +1,4 @@
-const ReactionInRoomPlugin = require('./reaction_in_room_plugin');
+const ReactionPlugin = require('./reaction_plugin');
+const DjChange = require('./dj_change_plugin');
 
-module.exports = {
-  roomPlugins: [ReactionInRoomPlugin],
-};
+module.exports = [ReactionPlugin, DjChange];
