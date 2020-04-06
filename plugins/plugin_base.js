@@ -33,9 +33,7 @@ module.exports = class PluginBase {
     this.onJoinRoom(socket, roomName);
     this.roomSockets.forEach((sockets, roomName) => {
       console.log(
-        `${this.constructor.name} Room Map :: ${roomName} ->  ${Array.from(
-          sockets
-        ).map((s) => s.id)}`
+        `${this.constructor.name} Room Map :: ${roomName} ->  ${sockets.size}`
       );
     });
   }
@@ -60,10 +58,9 @@ module.exports = class PluginBase {
   broadcastToSocketsRoom(socket, eventName, eventData) {
     const room = this.socketRooms.get(socket.id);
     if (room) {
-      console.log(`sending message to room ${eventName}`);
+      console.log(`sending event ${eventName} to room ${room}`);
       this.roomSockets.get(room).forEach((s) => {
         if (s.id !== socket.id) {
-          console.log(`sending ${eventName} to ${s.id} (from ${socket.id})`);
           s.emit(eventName, eventData);
         }
       });

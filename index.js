@@ -17,17 +17,14 @@ const registerPlugins = (io) => {
 };
 
 const notifyPluginsOfConnection = (socket) => {
-  console.log(`plugins being notified socket connect`);
   plugins.forEach((plug) => plug.connected(socket));
 };
 
 const notifyPluginsOfDisonnection = (socket) => {
-  console.log(`plugins being notified socket disconnect`);
   plugins.forEach((plug) => plug.disconnected(socket));
 };
 
 const notifyPluginsOfJoinedRoom = (socket, roomName) => {
-  console.log(`plugins being notified of room join`);
   plugins.forEach((plug) => plug.markSocketInRoom(socket, roomName));
 };
 
@@ -123,7 +120,9 @@ io.on('connection', (socket) => {
   });
 
   socket.on('hostEvent', (msg) => {
-    console.log('got event from host', msg.position, msg.name);
+    console.log(
+      `Music Sync: ${inRoomName} - ${msg.name} ${msg.artist} - @ ${msg.position}`
+    );
     io.to(inRoomName).emit('hostEvent', msg);
   });
 });
