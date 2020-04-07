@@ -8,6 +8,7 @@ const server = http.createServer(app);
 const io = SocketIO(server);
 
 const port = process.env.PORT || 4000;
+const PUBLIC_ROOM_CHARACTER = '#';
 
 let rooms = {};
 let plugins = [];
@@ -84,15 +85,21 @@ io.on('connection', (socket) => {
     leaveRoom(inRoomName, clientName);
   });
 
-  socket.on('becomeDJ', ({ room, name }) => {
+  socket.on('becomeDJ', ({ room, name }, response) => {
     console.log('Receiving DJ request from', name, 'in room', room);
-    if (rooms[room]) {
+    if (rooms[room] && rooms[room].canDj) {
       rooms[room]['dj'] = name;
       updateClientRoom();
+      response(true);
+    } else {
+      response(false);
     }
   });
 
   socket.on('joinRoom', ({ roomName, myName }) => {
+    // Lets normalize the room name to not be case sensative
+    roomName = roomName.toLowerCase();
+
     leaveRoom(inRoomName, myName);
 
     inRoomName = roomName;
@@ -106,11 +113,16 @@ io.on('connection', (socket) => {
 
     socket.join(inRoomName);
     if (!rooms[inRoomName]) {
+      const isPublic =
+        roomName.includes(PUBLIC_ROOM_CHARACTER) || roomName == 'lobby';
+
       rooms[inRoomName] = {
         count: 0,
         name: inRoomName,
         people: [],
         dj: clientName,
+        public: isPublic,
+        canDj: true,
       };
     }
     rooms[inRoomName].people.push(clientName);
@@ -121,7 +133,7 @@ io.on('connection', (socket) => {
 
   socket.on('hostEvent', (msg) => {
     console.log(
-      `Music Sync: ${inRoomName} - ${msg.name} ${msg.artist} - @ ${msg.position}`
+      `Music Sync: ${inRoomName} (dj: ${clientName}) - ${msg.name} by ${msg.artist} - @ ${msg.position}`
     );
     io.to(inRoomName).emit('hostEvent', msg);
   });
@@ -129,6 +141,32 @@ io.on('connection', (socket) => {
 
 io.on('connection', function (socket) {
   console.log('a user connected');
+});
+
+app.get('/rooms', (req, res) => {
+  let responseHTML = `<style>html{font-family: Helvetica} table {width: 100%; text-align: left;}</style>
+  <h1>Public Rooms</h1><table><tr><th>Room</th><th>Number of People</th><th>DJ</th></tr>`;
+  Object.values(rooms)
+    .filter((r) => r && !!r.public)
+    .forEach((r) => {
+      responseHTML += `<tr><td>${r.name}</td><td>${r.people.length}</td><td>${r.dj}</td></tr>`;
+    });
+  responseHTML += '</table>';
+  res.send(responseHTML);
+});
+
+app.get('/rooms.json', (req, res) => {
+  res.json(
+    Object.values(rooms)
+      .filter((r) => r && !!r.public)
+      .map((r) => {
+        return {
+          name: r.name,
+          count: r.people.length,
+          dj: r.dj,
+        };
+      })
+  );
 });
 
 server.listen(port, function () {
